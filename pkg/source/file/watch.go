@@ -723,7 +723,7 @@ func (w *Watcher) osNotify(e fsnotify.Event) {
 	if e.Op == fsnotify.Write {
 		stat, err := os.Stat(fileName)
 		if err != nil {
-			log.Error("os notify stat file(%s) fail: %s", fileName, err)
+			log.Warn("os notify stat file(%s) fail: %s", fileName, err)
 			return
 		}
 		jobUid := JobUid(stat)
