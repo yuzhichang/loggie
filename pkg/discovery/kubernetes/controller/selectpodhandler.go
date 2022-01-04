@@ -18,22 +18,22 @@ package controller
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/sets"
+
 	"loggie.io/loggie/pkg/core/cfg"
 	"loggie.io/loggie/pkg/core/log"
 	"loggie.io/loggie/pkg/core/source"
 	logconfigv1beta1 "loggie.io/loggie/pkg/discovery/kubernetes/apis/loggie/v1beta1"
 	"loggie.io/loggie/pkg/discovery/kubernetes/client/listers/loggie/v1beta1"
 	"loggie.io/loggie/pkg/discovery/kubernetes/helper"
-	"loggie.io/loggie/pkg/discovery/kubernetes/index"
 	"loggie.io/loggie/pkg/pipeline"
 	"loggie.io/loggie/pkg/source/file"
 	"loggie.io/loggie/pkg/util"
-	"strings"
 )
 
 const (
@@ -441,52 +441,5 @@ func toPipelineInterceptorWithPodInject(interceptorRef string, interceptorLister
 		return nil, err
 	}
 
-	// key: originSourceName, multi value: podName/containerName/originSourceName
-	originSrcNameMap := make(map[string]sets.String)
-	for _, fs := range filesources {
-		podSrcName := fs.GetName()
-		origin := getTypePodOriginSourceName(podSrcName)
-		srcVal, ok := originSrcNameMap[origin]
-		if !ok {
-			originSrcNameMap[origin] = sets.NewString(podSrcName)
-			continue
-		}
-		srcVal.Insert(podSrcName)
-	}
-
-	icpConfList := make([]index.ExtInterceptorConfig, 0)
-	err = cfg.UnpackRaw([]byte(lgcInterceptor.Spec.Interceptors), &icpConfList)
-	if err != nil {
-		return nil, err
-	}
-
-	for i, extIcp := range icpConfList {
-		if len(extIcp.BelongTo) == 0 {
-			continue
-		}
-
-		newBelongTo := make([]string, 0)
-		// update interceptor belongTo with podName/containerName/originSourceName
-		for _, origin := range extIcp.BelongTo {
-			podSrcNameSet, ok := originSrcNameMap[origin]
-			if !ok {
-				continue
-			}
-			newBelongTo = append(newBelongTo, podSrcNameSet.List()...)
-		}
-
-		icpConfList[i].BelongTo = newBelongTo
-	}
-
-	icpCommonCfg := make([]cfg.CommonCfg, 0)
-	for _, v := range icpConfList {
-		c, err := cfg.Pack(v)
-		if err != nil {
-			log.Info("pack interceptor config error: %+v", err)
-			continue
-		}
-		icpCommonCfg = append(icpCommonCfg, c)
-	}
-
-	return icpCommonCfg, nil
+	return toPipelineInterceptors(filesources, lgcInterceptor.Spec.Interceptors)
 }
