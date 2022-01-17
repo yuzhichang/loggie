@@ -1,14 +1,8 @@
 pipelines:
   - name: "xxx"
     sources:
-      - type: "file"
+      - type: "dev"
         name: "a"
-        paths:
-          - "/tmp/filesource/*.log"
-        fields:
-          topic: "lpt_topic_log_conf_service_pressure_access_1_wz_960"
-          ip: "10.159.129.28"
-          headType: 1
     sink:
       type: "dev"
       printEvents: true

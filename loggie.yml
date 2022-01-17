@@ -24,9 +24,7 @@ loggie:
     sink:
       type: dev
     sources:
-      - type: file
-        watcher:
-          cleanFiles:
-            maxHistory: 1
+      - type: dev
+
   http:
     enabled: true
